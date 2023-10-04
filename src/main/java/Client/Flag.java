@@ -1,0 +1,5 @@
+package Client;
+
+public enum Flag {
+    EDIT_STUDENT, ADD_STUDENT, CLIENT_ROLE, CLOSE_PROGRAM, VIEW_STUDENTS
+}
