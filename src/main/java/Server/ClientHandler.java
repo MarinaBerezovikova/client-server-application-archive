@@ -28,11 +28,10 @@ class ClientHandler extends Thread {
         ClientHandler clientHandler = new ClientHandler(clientSocket);
         try {
             // получаем объект роль клиента
-            ClientRoleMessage message = (ClientRoleMessage) clientHandler.inputStream.readObject();
+            ClientRoleMessage messageRole = (ClientRoleMessage) clientHandler.inputStream.readObject();
 
-            ClientMenu clientMenu = new ClientMenu();
-            clientMenu.defineClientMenu(message, clientSocket);
-            // управление переходит в меню по опред клиенту
+            ClientMenu clientMenu = new ClientMenu(messageRole.getClientRole());
+            clientMenu.executeRoleStrategy();
 
             //конец работы после выбора клиентом 0. закрыть программу
             closeConnection();
@@ -70,47 +69,35 @@ class ClientHandler extends Thread {
         }
     }
 
-
     private class ClientMenu {
 
-        Socket clientSocket;
-        ClientRole clientRole;
-        Flag flag;
+        private final RoleStrategy roleStrategy;
+
+        public ClientMenu(ClientRole clientRole) {
+            switch (clientRole) {
+                case USER:
+                    this.roleStrategy = new UserRoleStrategy();
+                    break;
+                case ADMIN:
+                    this.roleStrategy = new AdminRoleStrategy();
+                    break;
+                default:
+                    this.roleStrategy = new UndefinedRoleStrategy();
+            }
+        }
+
+        public void executeRoleStrategy() {
+            roleStrategy.executeMenu();
+        }
+
+    }
+    class UndefinedRoleStrategy implements RoleStrategy {
+
         PrintWriter writer;
         StudentFileManager studentFileManager;
 
-        private void defineClientMenu(ClientRoleMessage message, Socket clientSocket) {
-
-            this.clientSocket = clientSocket;
-
-            clientRole = validateClientRole(message.getClientRole());
-
-            switch (clientRole) {
-                case UNDEFINED:
-                    System.out.println("Подключился клиент " + ClientRole.UNDEFINED);
-                    startMenuForUndefinedRole();
-                    break;
-                case USER:
-                    System.out.println("Подключился клиент " + ClientRole.USER);
-                    startMenuForUserRole();
-                    break;
-                case ADMIN:
-                    System.out.println("Подключился клиент " + ClientRole.ADMIN);
-                    startMenuForAdminRole();
-//                default: // сюда неопределенного пользователя и при получении невалид значения?
-//                    throw new IllegalStateException("Unexpected value: " + clientRole);
-            }
-        }
-
-        private ClientRole validateClientRole(ClientRole clientRole) {
-            if (clientRole == ClientRole.USER || clientRole == ClientRole.ADMIN) {
-                return clientRole;
-            }
-            return ClientRole.UNDEFINED;
-
-        }
-
-        private void startMenuForUndefinedRole() {
+        @Override
+        public void executeMenu() {
             boolean isWorking = true;
             writer.println("Роль клиента не определена.\n");
             while (isWorking) {
@@ -129,7 +116,19 @@ class ClientHandler extends Thread {
             }
         }
 
-        private void startMenuForUserRole() {
+        @Override
+        public ClientRole getClientRole() {
+            return ClientRole.UNDEFINED;
+        }
+    }
+
+    class UserRoleStrategy implements RoleStrategy {
+
+        PrintWriter writer;
+        StudentFileManager studentFileManager;
+
+        @Override
+        public void executeMenu() {
             boolean isWorking = true;
             writer.println("Вы используете программу в роли пользователя.");
             while (isWorking) {
@@ -151,7 +150,19 @@ class ClientHandler extends Thread {
             }
         }
 
-        private void startMenuForAdminRole() {
+        @Override
+        public ClientRole getClientRole() {
+            return ClientRole.USER;
+        }
+    }
+
+    class AdminRoleStrategy implements RoleStrategy {
+
+        PrintWriter writer;
+        StudentFileManager studentFileManager;
+
+        @Override
+        public void executeMenu() {
             boolean isWorking = true;
             writer.println("Вы используете программу в роли администратора.");
             while (isWorking) {
@@ -177,37 +188,6 @@ class ClientHandler extends Thread {
                         studentFileManager.updateStudentFile(numberFile, objectMessageEdited.getContent());
                 }
             }
-
-        }
-    }
-    class UndefinedRoleStrategy implements RoleStrategy {
-        @Override
-        public void executeMenu() {
-            // код для выполнения для роли UNDEFINED
-        }
-
-        @Override
-        public ClientRole getClientRole() {
-            return ClientRole.UNDEFINED;
-        }
-    }
-
-    class UserRoleStrategy implements RoleStrategy {
-        @Override
-        public void executeMenu() {
-            // код для выполнения для роли USER
-        }
-
-        @Override
-        public ClientRole getClientRole() {
-            return ClientRole.USER;
-        }
-    }
-
-    class AdminRoleStrategy implements RoleStrategy {
-        @Override
-        public void executeMenu() {
-            // код для выполнения для роли ADMIN
         }
 
         @Override
